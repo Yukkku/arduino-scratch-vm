@@ -4,11 +4,13 @@ const baudRate = 57600;
 
 class Arduino {
   #runtime;
+  #extensionId;
   #availablePorts = [];
   #firmata = null;
 
   constructor(runtime, extensionId) {
     this.#runtime = runtime;
+    this.#extensionId = extensionId;
     runtime.registerPeripheralExtension(extensionId, this);
   }
 
@@ -32,29 +34,24 @@ class Arduino {
     await port.open({ baudRate });
     const transport = new WebSerialTransport(port);
     const board = new Firmata(transport);
+    console.log(board);
 
     board.on("ready", () => {
       this.#firmata = board;
       this.#runtime.emit(this.#runtime.constructor.PERIPHERAL_CONNECTED);
-
-      // Arduino is ready to communicate
-      const pin = 13;
-      let state = 1;
-
-      board.pinMode(pin, board.MODES.OUTPUT);
-
-      setInterval(() => {
-        board.digitalWrite(pin, (state ^= 1));
-      }, 500);
     });
 
     board.on("close", () => {
-      console.log("Closed!");
+      this.#firmata = null;
+      this.#runtime.emit(this.#runtime.constructor.PERIPHERAL_DISCONNECTED);
+      this.#runtime.emit(this.#runtime.constructor.PERIPHERAL_CONNECTION_LOST_ERROR, {
+        message: `Scratch lost connection to`,
+        extensionId: this.#extensionId
+      });
     });
   }
-  disconnect() {
-    console.log("Arduino:disconnect");
-}
+  disconnect() {}
+
   isConnected() {
     return this.#firmata != null;
   }
