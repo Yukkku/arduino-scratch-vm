@@ -21,7 +21,6 @@ class Arduino {
   }
 
   async scan() {
-    console.log("Arduino:scan");
     const ports = await navigator.serial.getPorts();
     this.#availablePorts = ports;
     this.#runtime.emit(
@@ -34,13 +33,10 @@ class Arduino {
     );
   }
   async connect(id) {
-    console.log("Arduino:connect", id);
-    console.log(this.#availablePorts);
     const port = this.#availablePorts[id];
     await port.open({ baudRate });
     const transport = new WebSerialTransport(port);
     const board = new Firmata(transport);
-    console.log(board);
 
     board.on("ready", () => {
       this.#firmata = board;
@@ -110,54 +106,60 @@ class ArduinoBlocks {
   }
 
   getInfo() {
-    const analogPins = this.#peripheral.analogPins();
-    const digitalPins = this.#peripheral.digitalPins();
     const blocks = [];
 
-    if (analogPins.length > 0) {
-      blocks.push({
-        opcode: "analogRead",
-        text: "A[PIN]",
-        blockType: BlockType.REPORTER,
-        arguments: {
-          PIN: {
-            type: ArgumentType.STRING,
-            menu: "analogPins",
-            defaultValue: String(analogPins[0]),
-          },
-        },
-      });
-    }
-    if (digitalPins.length > 0) {
-      blocks.push({
-        opcode: "digitalRead",
-        text: "D[PIN]",
-        blockType: BlockType.BOOLEAN,
-        arguments: {
-          PIN: {
-            type: ArgumentType.STRING,
-            menu: "digitalPins",
-            defaultValue: String(digitalPins[0]),
-          },
-        },
-      });
-    }
     return {
       id: "arduino",
       name: "Arduino",
       showStatusButton: true,
-      blocks,
+      blocks: [
+        {
+          opcode: "analogRead",
+          text: "A[PIN]",
+          blockType: BlockType.REPORTER,
+          arguments: {
+            PIN: {
+              type: ArgumentType.STRING,
+              menu: "analogPins",
+              defaultValue: this.analogPinsMenu()[0],
+            },
+          },
+        },
+        {
+          opcode: "digitalRead",
+          text: "D[PIN]",
+          blockType: BlockType.BOOLEAN,
+          arguments: {
+            PIN: {
+              type: ArgumentType.STRING,
+              menu: "digitalPins",
+              defaultValue: this.digitalPinsMenu()[0],
+            },
+          },
+        }
+      ],
       menus: {
         analogPins: {
           acceptReporters: false,
-          items: analogPins.map(String),
+          items: "analogPinsMenu",
         },
         digitalPins: {
           acceptReporters: false,
-          items: digitalPins.map(String),
+          items: "digitalPinsMenu",
         },
       },
     };
+  }
+
+  analogPinsMenu() {
+    const r = this.#peripheral.analogPins().map(String);
+    if (r.length === 0) r.push("");
+    return r;
+  }
+  digitalPinsMenu() {
+    const r = this.#peripheral.digitalPins().map(String);
+    if (r.length === 0) r.push("");
+    return r;
   }
 
   analogRead({ PIN }) {
