@@ -31,4 +31,4 @@ class ArduinoBlocks {
   }
 }
 
-module.exports = ArduinoBlocks;
+export default ArduinoBlocks;

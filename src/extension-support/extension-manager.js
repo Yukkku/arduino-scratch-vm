@@ -28,7 +28,7 @@ const defaultBuiltinExtensions = {
     // tw: core extension
     tw: () => require('../extensions/tw'),
 
-    arduino: () => require('../extensions/arduino'),
+    arduino: () => require('../extensions/arduino').default,
 };
 
 /**
