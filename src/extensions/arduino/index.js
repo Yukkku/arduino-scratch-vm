@@ -113,6 +113,18 @@ class Arduino {
     }
     return r;
   }
+  digitalPwmPins() {
+    if (this.#firmata == null) return [];
+    const { MODES } = this.#firmata;
+    const r = [];
+    for (const id in this.#firmata.pins) {
+      const pin = this.#firmata.pins[id];
+      if (pin.supportedModes.includes(MODES.OUTPUT)
+          && pin.supportedModes.includes(MODES.PWM)
+          && !pin.supportedModes.includes(MODES.ANALOG)) r.push(Number(id));
+    }
+    return r;
+  }
 
   setInputMode(pin) {
     this.#firmata.pinMode(pin, this.#firmata.MODES.INPUT);
@@ -217,7 +229,7 @@ class ArduinoBlocks {
           arguments: {
             PIN: {
               type: ArgumentType.STRING,
-              menu: "digitalOutPins",
+              menu: "digitalPwmPins",
             },
             VALUE: {
               type: ArgumentType.STRING,
@@ -250,6 +262,10 @@ class ArduinoBlocks {
           acceptReporters: false,
           items: "digitalOutPinsMenu",
         },
+        digitalPwmPins: {
+          acceptReporters: false,
+          items: "digitalPwmPinsMenu",
+        },
         zeroone: {
           acceptReporters: true,
           items: ["0", "1"],
@@ -275,6 +291,11 @@ class ArduinoBlocks {
   }
   digitalOutPinsMenu() {
     const r = this.#peripheral.digitalOutPins().map(String);
+    if (r.length === 0) r.push("");
+    return r;
+  }
+  digitalPwmPinsMenu() {
+    const r = this.#peripheral.digitalPwmPins().map(String);
     if (r.length === 0) r.push("");
     return r;
   }
