@@ -144,13 +144,16 @@ class Arduino {
   }
   digitalWrite(pin, value) {
     if (this.#firmata == null) return;
+    if (this.#firmata.pins[pin]?.mode === this.#firmata.MODES.INPUT) return;
+    if (!this.#firmata.pins[pin]?.supportedModes.includes(this.#firmata.MODES.OUTPUT)) return;
     this.#firmata.pinMode(pin, this.#firmata.MODES.OUTPUT);
     this.#firmata.digitalWrite(pin, value ? 1 : 0);
   }
   pwmWrite(pin, value) {
     if (this.#firmata == null) return;
+    if (this.#firmata.pins[pin]?.mode === this.#firmata.MODES.INPUT) return;
+    if (!this.#firmata.pins[pin]?.supportedModes.includes(this.#firmata.MODES.PWM)) return;
     this.#firmata.pinMode(pin, this.#firmata.MODES.PWM);
-    console.log(pin, value);
     this.#firmata.pwmWrite(pin, Math.round(value * this.#firmata.RESOLUTION.PWM));
   }
 }
