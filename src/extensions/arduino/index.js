@@ -39,6 +39,7 @@ class Arduino {
     const board = new Firmata(transport);
 
     board.on("ready", () => {
+      console.log(board);
       this.#firmata = board;
       this.#runtime.emit(this.#runtime.constructor.PERIPHERAL_CONNECTED);
       this.#setup();
@@ -66,7 +67,8 @@ class Arduino {
         this.#analogCache.set(pin, val);
       });
     }
-    for (const pin of this.digitalPins()) {
+    for (const pin of this.digitalInPins()) {
+      this.#firmata.pinMode(pin, this.#firmata.MODES.INPUT);
       this.#firmata.digitalRead(pin, val => {
         this.#digitalCache.set(pin, val);
       });
@@ -77,19 +79,50 @@ class Arduino {
     if (this.#firmata == null) return [];
     return Object.values(this.#firmata.analogPinLookup);
   }
-  analogRead(pin) {
-    return this.#analogCache.get(pin);
-  }
-
-  digitalPins() {
+  digitalInOutPins() {
     if (this.#firmata == null) return [];
     const { MODES } = this.#firmata;
     const r = [];
     for (const id in this.#firmata.pins) {
       const pin = this.#firmata.pins[id];
-      if (pin.supportedModes.includes(MODES.INPUT) && !pin.supportedModes.includes(MODES.ANALOG)) r.push(id);
+      if (pin.supportedModes.includes(MODES.INPUT)
+          && pin.supportedModes.includes(MODES.OUTPUT)
+          && !pin.supportedModes.includes(MODES.ANALOG)) r.push(id);
     }
     return r;
+  }
+  digitalInPins() {
+    if (this.#firmata == null) return [];
+    const { MODES } = this.#firmata;
+    const r = [];
+    for (const id in this.#firmata.pins) {
+      const pin = this.#firmata.pins[id];
+      if (pin.supportedModes.includes(MODES.INPUT)
+          && !pin.supportedModes.includes(MODES.ANALOG)) r.push(id);
+    }
+    return r;
+  }
+  digitalOutPins() {
+    if (this.#firmata == null) return [];
+    const { MODES } = this.#firmata;
+    const r = [];
+    for (const id in this.#firmata.pins) {
+      const pin = this.#firmata.pins[id];
+      if (pin.supportedModes.includes(MODES.OUTPUT)
+          && !pin.supportedModes.includes(MODES.ANALOG)) r.push(id);
+    }
+    return r;
+  }
+
+  setInputMode(pin) {
+    this.#firmata.pinMode(pin, this.#firmata.MODES.INPUT);
+  }
+  setOutputMode(pin) {
+    this.#firmata.pinMode(pin, this.#firmata.MODES.OUTPUT);
+  }
+
+  analogRead(pin) {
+    return this.#analogCache.get(pin);
   }
   digitalRead(pin) {
     return this.#digitalCache.get(pin);
@@ -106,13 +139,26 @@ class ArduinoBlocks {
   }
 
   getInfo() {
-    const blocks = [];
-
     return {
       id: "arduino",
       name: "Arduino",
       showStatusButton: true,
       blocks: [
+        {
+          opcode: "setMode",
+          text: "[PIN]ピンを[MODE]モードにする",
+          blockType: BlockType.COMMAND,
+          arguments: {
+            PIN: {
+              type: ArgumentType.STRING,
+              menu: "digitalInOutPins",
+            },
+            MODE: {
+              type: ArgumentType.STRING,
+              menu: "modes",
+            },
+          },
+        },
         {
           opcode: "analogRead",
           text: "A[PIN]",
@@ -131,19 +177,34 @@ class ArduinoBlocks {
           arguments: {
             PIN: {
               type: ArgumentType.STRING,
-              menu: "digitalPins",
+              menu: "digitalInPins",
             },
           },
         }
       ],
       menus: {
+        modes: {
+          acceptReporters: false,
+          items: [
+            { text: "入力", value: "INPUT" },
+            { text: "出力", value: "OUTPUT" },
+          ],
+        },
         analogPins: {
           acceptReporters: false,
           items: "analogPinsMenu",
         },
-        digitalPins: {
+        digitalInOutPins: {
           acceptReporters: false,
-          items: "digitalPinsMenu",
+          items: "digitalInOutPinsMenu",
+        },
+        digitalInPins: {
+          acceptReporters: false,
+          items: "digitalInPinsMenu",
+        },
+        digitalOutPins: {
+          acceptReporters: false,
+          items: "digitalOutPinsMenu",
         },
       },
     };
@@ -154,12 +215,27 @@ class ArduinoBlocks {
     if (r.length === 0) r.push("");
     return r;
   }
-  digitalPinsMenu() {
-    const r = this.#peripheral.digitalPins().map(String);
+  digitalInOutPinsMenu() {
+    const r = this.#peripheral.digitalInOutPins().map(String);
+    if (r.length === 0) r.push("");
+    return r;
+  }
+  digitalInPinsMenu() {
+    const r = this.#peripheral.digitalInPins().map(String);
+    if (r.length === 0) r.push("");
+    return r;
+  }
+  digitalOutPinsMenu() {
+    const r = this.#peripheral.digitalOutPins().map(String);
     if (r.length === 0) r.push("");
     return r;
   }
 
+  setMode({ PIN, MODE }) {
+    const pin = Cast.toNumber(PIN);
+    if (MODE === "INPUT") this.#peripheral.setInputMode(pin);
+    if (MODE === "OUTPUT") this.#peripheral.setOutputMode(pin);
+  }
   analogRead({ PIN }) {
     const pin = Cast.toNumber(PIN);
     return Math.round((this.#peripheral.analogRead(pin) ?? 0) / 1.023) / 10;
