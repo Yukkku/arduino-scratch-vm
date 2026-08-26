@@ -25,11 +25,27 @@ class Arduino {
     this.#availablePorts = ports;
     this.#runtime.emit(
       this.#runtime.constructor.PERIPHERAL_LIST_UPDATE,
-      this.#availablePorts.map((port, i) => ({
-        name: "Unknown Device",
-        peripheralId: i,
-        port,
-      })),
+      this.#availablePorts.map((port, i) => {
+        const info = port.getInfo();
+        let name = "Unknown Device";
+        if (info.usbVendorId === 0x2341 && info.usbProductId === 0x003E) {
+          name = "Arduino Due";
+        }
+        if (info.usbVendorId === 0x2341 && info.usbProductId === 0x8036) {
+          name = "Arduino Leonardo";
+        }
+        if (info.usbVendorId === 0x2341 && info.usbProductId === 0x0001) {
+          name = "Arduino Uno";
+        }
+        if (info.usbVendorId === 0x2341 && info.usbProductId === 0x0043) {
+          name = "Arduino Uno R3";
+        }
+        return {
+          name,
+          peripheralId: i,
+          port,
+        };
+      }),
     );
   }
   async connect(id) {
