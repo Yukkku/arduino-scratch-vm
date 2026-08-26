@@ -47,6 +47,8 @@ class Arduino {
 
     board.on("close", () => {
       this.#firmata = null;
+      this.#analogCache = new Map();
+      this.#digitalCache = new Map();
       this.#runtime.emit(this.#runtime.constructor.PERIPHERAL_DISCONNECTED);
       this.#runtime.emit(this.#runtime.constructor.PERIPHERAL_CONNECTION_LOST_ERROR, {
         message: `Scratch lost connection to`,
@@ -55,7 +57,9 @@ class Arduino {
     });
   }
   disconnect() {
-    alert("TODO");
+    this.#firmata = null;
+    this.#analogCache = new Map();
+    this.#digitalCache = new Map();
   }
   isConnected() {
     return this.#firmata != null;
