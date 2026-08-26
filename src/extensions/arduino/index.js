@@ -121,7 +121,6 @@ class ArduinoBlocks {
             PIN: {
               type: ArgumentType.STRING,
               menu: "analogPins",
-              defaultValue: this.analogPinsMenu()[0],
             },
           },
         },
@@ -133,7 +132,6 @@ class ArduinoBlocks {
             PIN: {
               type: ArgumentType.STRING,
               menu: "digitalPins",
-              defaultValue: this.digitalPinsMenu()[0],
             },
           },
         }
