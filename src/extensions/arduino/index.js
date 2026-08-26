@@ -119,13 +119,27 @@ class Arduino {
   }
   setOutputMode(pin) {
     this.#firmata.pinMode(pin, this.#firmata.MODES.OUTPUT);
+    this.#digitalCache.delete(pin);
   }
 
   analogRead(pin) {
+    if (this.#firmata == null) return null;
     return this.#analogCache.get(pin);
   }
   digitalRead(pin) {
+    if (this.#firmata == null) return null;
     return this.#digitalCache.get(pin);
+  }
+  digitalWrite(pin, value) {
+    if (this.#firmata == null) return;
+    this.#firmata.pinMode(pin, this.#firmata.MODES.OUTPUT);
+    this.#firmata.digitalWrite(pin, value ? 1 : 0);
+  }
+  pwmWrite(pin, value) {
+    if (this.#firmata == null) return;
+    this.#firmata.pinMode(pin, this.#firmata.MODES.PWM);
+    console.log(pin, value);
+    this.#firmata.pwmWrite(pin, Math.round(value * this.#firmata.RESOLUTION.PWM));
   }
 }
 
@@ -180,7 +194,37 @@ class ArduinoBlocks {
               menu: "digitalInPins",
             },
           },
-        }
+        },
+        {
+          opcode: "digitalWrite",
+          text: "[PIN]ピンから[VALUE]をデジタル出力",
+          blockType: BlockType.COMMAND,
+          arguments: {
+            PIN: {
+              type: ArgumentType.STRING,
+              menu: "digitalOutPins",
+            },
+            VALUE: {
+              type: ArgumentType.STRING,
+              menu: "zeroone",
+            },
+          },
+        },
+        {
+          opcode: "pwmWrite",
+          text: "[PIN]ピンから[VALUE]をPWM出力",
+          blockType: BlockType.COMMAND,
+          arguments: {
+            PIN: {
+              type: ArgumentType.STRING,
+              menu: "digitalOutPins",
+            },
+            VALUE: {
+              type: ArgumentType.STRING,
+              defaultValue: "50",
+            },
+          },
+        },
       ],
       menus: {
         modes: {
@@ -205,6 +249,10 @@ class ArduinoBlocks {
         digitalOutPins: {
           acceptReporters: false,
           items: "digitalOutPinsMenu",
+        },
+        zeroone: {
+          acceptReporters: true,
+          items: ["0", "1"],
         },
       },
     };
@@ -243,6 +291,16 @@ class ArduinoBlocks {
   digitalRead({ PIN }) {
     const pin = Cast.toNumber(PIN);
     return Boolean(this.#peripheral.digitalRead(pin) ?? 0);
+  }
+  digitalWrite({ PIN, VALUE }) {
+    const pin = Cast.toNumber(PIN);
+    const value = Cast.toBoolean(VALUE);
+    this.#peripheral.digitalWrite(pin, value);
+  }
+  pwmWrite({ PIN, VALUE }) {
+    const pin = Cast.toNumber(PIN);
+    const value = Math.min(1, Math.max(0, Cast.toNumber(VALUE) / 100));
+    this.#peripheral.pwmWrite(pin, value);
   }
 }
 
