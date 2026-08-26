@@ -64,7 +64,7 @@ class Arduino {
   #setup() {
     for (const pin of this.analogPins()) {
       this.#firmata.analogRead(pin, val => {
-        this.#analogCache.set(pin, val);
+        this.#analogCache.set(pin, val / this.#firmata.RESOLUTION.ADC);
       });
     }
     for (const pin of this.digitalInPins()) {
@@ -87,7 +87,7 @@ class Arduino {
       const pin = this.#firmata.pins[id];
       if (pin.supportedModes.includes(MODES.INPUT)
           && pin.supportedModes.includes(MODES.OUTPUT)
-          && !pin.supportedModes.includes(MODES.ANALOG)) r.push(id);
+          && !pin.supportedModes.includes(MODES.ANALOG)) r.push(Number(id));
     }
     return r;
   }
@@ -98,7 +98,7 @@ class Arduino {
     for (const id in this.#firmata.pins) {
       const pin = this.#firmata.pins[id];
       if (pin.supportedModes.includes(MODES.INPUT)
-          && !pin.supportedModes.includes(MODES.ANALOG)) r.push(id);
+          && !pin.supportedModes.includes(MODES.ANALOG)) r.push(Number(id));
     }
     return r;
   }
@@ -109,7 +109,7 @@ class Arduino {
     for (const id in this.#firmata.pins) {
       const pin = this.#firmata.pins[id];
       if (pin.supportedModes.includes(MODES.OUTPUT)
-          && !pin.supportedModes.includes(MODES.ANALOG)) r.push(id);
+          && !pin.supportedModes.includes(MODES.ANALOG)) r.push(Number(id));
     }
     return r;
   }
@@ -238,7 +238,7 @@ class ArduinoBlocks {
   }
   analogRead({ PIN }) {
     const pin = Cast.toNumber(PIN);
-    return Math.round((this.#peripheral.analogRead(pin) ?? 0) / 1.023) / 10;
+    return Math.round((this.#peripheral.analogRead(pin) ?? 0) * 1000) / 10;
   }
   digitalRead({ PIN }) {
     const pin = Cast.toNumber(PIN);
