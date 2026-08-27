@@ -6,6 +6,8 @@ import Cast from "../../util/cast";
 
 const baudRate = 57600;
 
+const sleep = time => new Promise(resolve => setTimeout(() => resolve(), time));
+
 class Arduino {
   #runtime;
   #extensionId;
@@ -88,7 +90,7 @@ class Arduino {
       });
     }
     for (const pin of this.digitalInPins()) {
-      this.#firmata.pinMode(pin, this.#firmata.MODES.INPUT);
+      this.#firmata.pinMode(pin, this.#firmata.MODES.PULLUP);
       this.#firmata.digitalRead(pin, val => {
         this.#digitalCache.set(pin, val);
       });
@@ -105,7 +107,7 @@ class Arduino {
     const r = [];
     for (const id in this.#firmata.pins) {
       const pin = this.#firmata.pins[id];
-      if (pin.supportedModes.includes(MODES.INPUT)
+      if (pin.supportedModes.includes(MODES.PULLUP)
           && pin.supportedModes.includes(MODES.OUTPUT)
           && !pin.supportedModes.includes(MODES.ANALOG)) r.push(Number(id));
     }
@@ -117,7 +119,7 @@ class Arduino {
     const r = [];
     for (const id in this.#firmata.pins) {
       const pin = this.#firmata.pins[id];
-      if (pin.supportedModes.includes(MODES.INPUT)
+      if (pin.supportedModes.includes(MODES.PULLUP)
           && !pin.supportedModes.includes(MODES.ANALOG)) r.push(Number(id));
     }
     return r;
@@ -147,7 +149,7 @@ class Arduino {
   }
 
   setInputMode(pin) {
-    this.#firmata.pinMode(pin, this.#firmata.MODES.INPUT);
+    this.#firmata.pinMode(pin, this.#firmata.MODES.PULLUP);
   }
   setOutputMode(pin) {
     this.#firmata.pinMode(pin, this.#firmata.MODES.OUTPUT);
@@ -164,13 +166,15 @@ class Arduino {
   }
   digitalWrite(pin, value) {
     if (this.#firmata == null) return;
+    if (this.#firmata.pins[pin]?.mode === this.#firmata.MODES.PULLUP) return;
     if (this.#firmata.pins[pin]?.mode === this.#firmata.MODES.INPUT) return;
     if (!this.#firmata.pins[pin]?.supportedModes.includes(this.#firmata.MODES.OUTPUT)) return;
     this.#firmata.pinMode(pin, this.#firmata.MODES.OUTPUT);
-    this.#firmata.digitalWrite(pin, value ? 1 : 0);
+    const t = this.#firmata.digitalWrite(pin, value ? 1 : 0);
   }
   pwmWrite(pin, value) {
     if (this.#firmata == null) return;
+    if (this.#firmata.pins[pin]?.mode === this.#firmata.MODES.PULLUP) return;
     if (this.#firmata.pins[pin]?.mode === this.#firmata.MODES.INPUT) return;
     if (!this.#firmata.pins[pin]?.supportedModes.includes(this.#firmata.MODES.PWM)) return;
     this.#firmata.pinMode(pin, this.#firmata.MODES.PWM);
@@ -340,11 +344,13 @@ class ArduinoBlocks {
     const pin = Cast.toNumber(PIN);
     const value = Cast.toBoolean(VALUE);
     this.#peripheral.digitalWrite(pin, value);
+    return sleep(10);
   }
   pwmWrite({ PIN, VALUE }) {
     const pin = Cast.toNumber(PIN);
     const value = Math.min(1, Math.max(0, Cast.toNumber(VALUE) / 100));
     this.#peripheral.pwmWrite(pin, value);
+    return sleep(10);
   }
 }
 
